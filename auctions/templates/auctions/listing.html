@@ -1,0 +1,215 @@
+{% extends "auctions/layout.html" %}
+
+{% block body %}
+    <div class="listing-page-body container">
+        <div class="row">
+            <div class="col-6 listing-page-left-half">
+                <div class="listing-page-quick-info">
+                    <h2>{{ listing.title }} {% if not listing.activeFlag %} &nbsp;
+                        <span class="listing-closed-info">(closed)</span> {% endif %}</h2>
+                    <p>Listing created by: <span class="listing-info-value">{{ listing.owner }}
+                        {%  if is_mine %}  (you!) {% endif %}</span></p>
+                    <p>Starting price: <span class="listing-info-value">${{ listing.startBid }}</span></p>
+                    <p>Number of bids: <span class="listing-info-value">{{ listing.num_of_bids }}</span></p>
+                    <p>Current price: <span class="listing-info-value">${{ listing.current_price.offer__max }}</span></p>
+                    <p>Description of listing: <span class="listing-info-value">{{ listing.description }}</span></p>
+                </div>
+                <div class="listing-page-bid-section">
+                    <h5>Bid on this item!</h5>
+                    {% if user.is_authenticated %}
+                        
+                        {%  if not listing.activeFlag %}
+                            <p class="listing-closed-info">This listing has been closed!</p>
+                        {% endif %}
+                        {% if is_mine %}
+                            <p>You can't bid this item, You are the owner.</p>
+                        {% endif %}
+                        <fieldset {% if not listing.activeFlag or is_mine %} disabled class="disabled" {% endif %} >
+                            <form method="post" action="{% url 'create bid' listing.pk %}">
+                                {% csrf_token %}
+                                {% for field in form %}
+                                    <div class="form-group row">
+                                        <label class="col-3 col-form-label"
+                                            for="{{ field.id_for_label }}">{{ field.label }}: </label>
+                                        <div class="col-9">
+                                            {% if field.help_text %}
+                                                <p class="help">{{ field.help_text }}</p>
+                                            {% endif %}
+                                            <input type="number" name="offer" min="{{ listing.current_price.offer__max }}" value="{{ listing.current_price.offer__max }}" required="" id="id_offer">
+                                            {{ field.errors }}
+
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                                <button type="submit" class="btn btn-primary">Make bid</button>
+                            </form>
+                        </fieldset>
+                        
+                    {% else %}
+                        {% if not listing.activeFlag %}
+                            <p>This item listing has been closed!</p>
+                        {% else %}
+                            <p>Please sign in first to bid on this item!</p>
+                        {% endif %}
+                    {% endif %}
+
+
+                </div>
+
+            </div>
+            <div class="col-6 listing-page-right-half">
+                <div class="container">
+                    <div class="row watchlist-section no-gutters align-items-center">
+                        {% if user.is_authenticated %}
+                            {% if is_mine %}
+                                <p>You can't add this item in watchlist, You are the owner.</p>
+                            {% else %}                        
+
+                                <div class="col-10">
+                                    <p>{% if is_watchlist %}
+                                        Item is in watchlist
+                                        {% else %}
+                                        Item is not in watchlist
+                                        {% endif %}
+                                    </p>
+                                </div>
+                                <div class="col-2">
+                                    <form action="{% url 'watchlist action' listing.pk %}" method="POST">
+                                        {% csrf_token %}
+
+                                        <button type="submit">
+                                            <img src="
+                                                    {% if is_watchlist %}
+                                                        https://freeiconshop.com/wp-content/uploads/edd/star-outline-filled.png
+                                                    {% else %}
+                                                        https://image.flaticon.com/icons/svg/929/929566.svg
+                                                    {% endif %}"
+                                                 alt="
+                                                    {% if is_watchlist %}
+                                                        filled in star
+                                                    {% else %}
+                                                        unfilled star
+                                                    {% endif %}">
+                                        </button>
+                                    </form>
+                                </div>                                
+                            {% endif %}
+                        {% else %}
+                            <p>Please sign in first to add item to your watchlist!</p>
+                        {% endif %}
+                    </div>
+                    <div class="row listing-image-listing">
+                    <div class="col">{% load static %}
+                        <img class=" float-right" src="{% if listing.imageURL %} {%static 'img/'%}{{listing.imageURL}} {% else %}
+                        {%static 'img/default.jpg'%} {% endif %}" alt="listing  image">
+                    </div>
+
+                    </div>
+                </div>
+
+
+            </div>
+        </div>
+
+        {%  if is_mine %}
+
+                {% if listing.activeFlag %}
+                    <form class="row listing-page-bid-close-section" method="POST" action="{% url 'close listing' listing.pk %}">
+                        {%  csrf_token %}
+                        <button class="btn btn-primary">Close this listing</button>
+                    </form>
+                {% endif %}
+
+
+        {% endif %}
+
+        <div class="row listing-page-end-result">
+            <div class="col-12">
+
+
+                <h5>Current status of this listing</h5>
+                {% if not listing.activeFlag %}
+                    {% if is_mine %}
+                        {% if listing.buyer %}
+                            <p> Your listing was sold to <strong>{{ listing.buyer }}</strong></p>
+                        {% else %}
+                            <p> Your listing was not sold to anyone.</p>
+                        {% endif %}
+                    {% else %}
+                        {%  if listing.buyer == user %}
+                            <p> You have won this auction!</p>
+                        {% elif listing.buyer is None %}
+                            <p> Nobody bid on this listing and it has been closed. </p>
+                        {% else %}
+                            <p> An anonymous user has won this auction!</p>
+                        {% endif %}
+                    {% endif %}
+                {% else %}
+                    <p> This listing is still accepting bids!</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <hr/>
+
+        <div class="row listing-comments-section">
+            <h5>Comments Section</h5>
+            
+
+
+            <div class="container">
+                <div class="row made-comments">
+
+                    <div class="container mt-3">
+
+                        {% for comment in listing.all_comments.all %}
+                            <div class="comment-widgets m-b-20">
+                                <div class="d-flex flex-row comment-row">
+                                    <div class="p-2"><span class="round"><img src="https://i.imgur.com/CFpa3nK.jpg" alt="user" width="50"></span></div>
+                                    <div class="comment-text w-100">
+                                        <h5>{{ comment.user }}</h5>
+                                        <div class="comment-footer f-1"> <p>5 days ago</p> </div>
+                                        <p class="m-b-5 m-t-10">{{ comment.comment }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+
+                    </div>
+
+                </div>
+                {%  if user.is_authenticated %}
+                <div class="row type-your-comment">
+                    <div class="col">
+                        <form action="{% url 'leave comment' listing.pk %}" method="post" id="comment-form">
+                            {% csrf_token %}
+                            <div class="form-group row">
+                                <label for="comment" class="col-12 col-form-label"> Your comment</label>
+                            </div>
+                            <div class="form-group row">
+                                <textarea id="comment" name="comment" placeholder="type your comment here..." class="col-6"></textarea>
+                            </div>
+                            <div class="form-group row">
+                                <input type="submit" value="Submit" class="col-2">
+                            </div>
+
+
+                        </form>
+                    </div>
+
+
+                </div>
+                {% else %}
+                <p>Please sign in first to submit your own comments!</p>
+                {% endif %}
+            </div>
+
+
+        </div>
+
+
+    </div>
+
+
+
+{% endblock %}
